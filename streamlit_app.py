@@ -3,16 +3,6 @@ from openai import OpenAI
 from google.cloud import bigquery
 import streamlit as st
 
-# Debug: Print all available secrets
-st.write("Available secrets:", list(st.secrets.keys()))
-
-# Try to access the specific secret
-try:
-    st.write("GCP secrets found:", st.secrets["gcp_service_account"])
-except KeyError as e:
-    st.error(f"Secret not found: {e}")
-    st.write("Current working directory:", os.getcwd())
-    
 # Show title and description.
 st.title("💬 My new Chatbot")
 st.write(
