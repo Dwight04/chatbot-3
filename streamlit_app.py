@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+from google.cloud import bigquery
 
 # Show title and description.
 st.title("💬 My new Chatbot")
