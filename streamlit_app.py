@@ -15,7 +15,7 @@ bq_client = bigquery.Client(credentials=credentials, project='textsummarizerproj
 
 
 # Show title and description
-st.title("💬 Text to SQL Charts")
+st.title("💬 Text to SQL with Charts")
 st.write(
     "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
@@ -40,6 +40,63 @@ def validate_table_name(table_name):
         return False, "Table name cannot have empty parts"
     
     return True, "Valid"
+
+def format_currency(value):
+    """Format numbers as currency with appropriate units"""
+    if value >= 1_000_000:
+        return f"${value/1_000_000:.1f}M"
+    elif value >= 1_000:
+        return f"${value/1_000:.1f}K"
+    else:
+        return f"${value:,.2f}"
+
+def create_chart1(data, query_info):
+    """Create chart for aggregation data - show ALL aggregated results"""
+    if data.empty or len(data.columns) < 2:
+        return
+    
+    x_col, y_col = data.columns[0], data.columns[1]
+    operation = query_info.get('operation', '').lower()
+    
+    # For aggregation queries, show ALL results since data is already summarized
+    if operation in ['avg', 'average', 'mean']:
+        fig = px.line(data, x=x_col, y=y_col, markers=True, 
+                    title=f"Average {query_info['column']} by {query_info['group_by']}")
+    else:
+        fig = px.bar(data, x=x_col, y=y_col,
+                    title=f"{operation.title()} of {query_info['column']} by {query_info['group_by']}")
+    
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig, use_container_width=True)
+
+def create_chart(data, query_info):
+    """Create chart for aggregation data"""
+    if data.empty or len(data.columns) < 2:
+        return
+    
+    x_col, y_col = data.columns[0], data.columns[1]
+    operation = query_info.get('operation', '').lower()
+    
+    # Check if we need currency formatting
+    needs_currency = any(keyword in query_info.get('column', '').lower() 
+                        for keyword in ['balance', 'amount', 'price', 'revenue', 'sales', 'cost'])
+    
+    # Format the data for display
+    display_data = data.copy()
+    if needs_currency and pd.api.types.is_numeric_dtype(display_data[y_col]):
+        display_data['formatted_value'] = display_data[y_col].apply(format_currency)
+        
+        # Create a formatted table
+        st.subheader(f"💰 {operation.title()} of {query_info['column']} by {query_info['group_by']}")
+        
+        # Show formatted table
+        formatted_table = display_data[[x_col, 'formatted_value']].copy()
+        formatted_table.columns = [query_info['group_by'].title(), f"{operation.title()} {query_info['column'].title()}"]
+        st.dataframe(formatted_table, use_container_width=True)
+    else:
+        st.subheader(f"📊 {operation.title()} of {query_info['column']} by {query_info['group_by']}")
+        
+
 
 if not openai_api_key:
     st.info("Please add your OpenAI API key to continue.", icon="🗝️")
@@ -96,24 +153,7 @@ else:
         except Exception as e:
             st.error(f"Error getting column information: {e}")
 
-        def create_chart(data, query_info):
-            """Create chart for aggregation data - show ALL aggregated results"""
-            if data.empty or len(data.columns) < 2:
-                return
-            
-            x_col, y_col = data.columns[0], data.columns[1]
-            operation = query_info.get('operation', '').lower()
-            
-            # For aggregation queries, show ALL results since data is already summarized
-            if operation in ['avg', 'average', 'mean']:
-                fig = px.line(data, x=x_col, y=y_col, markers=True, 
-                            title=f"Average {query_info['column']} by {query_info['group_by']}")
-            else:
-                fig = px.bar(data, x=x_col, y=y_col,
-                            title=f"{operation.title()} of {query_info['column']} by {query_info['group_by']}")
-            
-            fig.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig, use_container_width=True)
+        
 
         def parse_query(prompt):
             """Parse user query and return query type and parameters"""
