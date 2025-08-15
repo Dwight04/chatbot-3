@@ -97,7 +97,7 @@ else:
             st.error(f"Error getting column information: {e}")
 
         def create_chart(data, query_info):
-    """Create chart for aggregation data - show ALL aggregated results"""
+            """Create chart for aggregation data - show ALL aggregated results"""
             if data.empty or len(data.columns) < 2:
                 return
             
