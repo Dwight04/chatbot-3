@@ -4,6 +4,8 @@ from google.cloud import bigquery
 import pandas as pd
 from google.oauth2 import service_account
 import re
+import plotly.express as px
+
 
 credentials = service_account.Credentials.from_service_account_info(
     st.secrets["gcp_service_account"]
@@ -13,7 +15,7 @@ bq_client = bigquery.Client(credentials=credentials, project='textsummarizerproj
 
 
 # Show title and description
-st.title("💬 Text to SQL Test")
+st.title("💬 Text to SQL Charts")
 st.write(
     "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
     "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
@@ -93,6 +95,25 @@ else:
             
         except Exception as e:
             st.error(f"Error getting column information: {e}")
+
+        def create_chart(data, query_info):
+    """Create chart for aggregation data - show ALL aggregated results"""
+            if data.empty or len(data.columns) < 2:
+                return
+            
+            x_col, y_col = data.columns[0], data.columns[1]
+            operation = query_info.get('operation', '').lower()
+            
+            # For aggregation queries, show ALL results since data is already summarized
+            if operation in ['avg', 'average', 'mean']:
+                fig = px.line(data, x=x_col, y=y_col, markers=True, 
+                            title=f"Average {query_info['column']} by {query_info['group_by']}")
+            else:
+                fig = px.bar(data, x=x_col, y=y_col,
+                            title=f"{operation.title()} of {query_info['column']} by {query_info['group_by']}")
+            
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig, use_container_width=True)
 
         def parse_query(prompt):
             """Parse user query and return query type and parameters"""
@@ -182,6 +203,9 @@ else:
                     bigquery_client = bigquery.Client.from_service_account_info(dict(st.secrets["gcp_service_account"]))
                     data = bigquery_client.query(QUERY).to_dataframe()
                     st.dataframe(data)
+                    # Add chart for aggregation queries
+                    if query_info['type'] == 'aggregation' and not data.empty:
+                        create_chart(data, query_info)
                 except Exception as e:
                     st.error(f"Error executing query: {e}")
                     # Try simple fallback

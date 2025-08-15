@@ -3,3 +3,4 @@ openai
 google-cloud-bigquery
 pandas
 db-dtypes
+plotly
