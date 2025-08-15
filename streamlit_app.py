@@ -95,7 +95,13 @@ def create_chart(data, query_info):
         st.dataframe(formatted_table, use_container_width=True)
     else:
         st.subheader(f"📊 {operation.title()} of {query_info['column']} by {query_info['group_by']}")
-        
+    # Create chart
+    chart_data = data.set_index(x_col)
+    
+    if operation in ['avg', 'average', 'mean']:
+        st.line_chart(chart_data[y_col])
+    else:
+        st.bar_chart(chart_data[y_col])    
 
 
 if not openai_api_key:
