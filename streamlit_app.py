@@ -5,6 +5,7 @@ import pandas as pd
 from google.oauth2 import service_account
 import re
 import plotly.express as px
+import time
 
 
 credentials = service_account.Credentials.from_service_account_info(
@@ -25,6 +26,9 @@ st.write(
     "Simply enter your BigQuery table name and start asking questions about your data!"
 )   
 bigquery_table_name = st.text_input("BigQuery Table Name (format: project.dataset.table)", placeholder="your-project.your-dataset.your-table") 
+
+uploaded_file = st.file_uploader("Or upload CSV file", type="csv") if not bigquery_table_name else None
+
 try:
     client = OpenAI(api_key=st.secrets["openai"]["api_key"])
 except KeyError:
@@ -78,6 +82,19 @@ def create_chart1(data, query_info):
     fig.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig, use_container_width=True)
 
+def create_temp_bq_table(df, uploaded_filename):
+    """Upload CSV to BigQuery as temporary table"""
+    table_name = uploaded_filename.replace('.csv', '').replace('-', '_').replace(' ', '_')
+    temp_table_id = f"textsummarizerproject.temp_dataset.{table_name}_{int(time.time())}"
+    
+    job = bq_client.load_table_from_dataframe(df, temp_table_id)
+    job.result()
+    
+    return temp_table_id
+
+
+
+
 def create_chart(data, query_info):
     """Create chart for aggregation data"""
     if data.empty or len(data.columns) < 2:
@@ -115,9 +132,16 @@ def create_chart(data, query_info):
 
 #if not openai_api_key:
 #    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-if not bigquery_table_name:
-    st.info("Please add your Google BigQuery Table Name to continue.")    
+if not bigquery_table_name and not uploaded_file:
+    st.info("Please add your Google BigQuery Table Name or upload a CSV file to continue.")    
 else:
+    # Handle CSV upload
+    if uploaded_file and not bigquery_table_name:
+        df = pd.read_csv(uploaded_file)
+        st.info("Uploading CSV to BigQuery...")
+        bigquery_table_name = create_temp_bq_table(df, uploaded_file.name)
+        st.success(f"✅ CSV uploaded as temporary table")
+    
     # Validate table name format
     is_valid, validation_message = validate_table_name(bigquery_table_name)
     
@@ -125,15 +149,6 @@ else:
         st.error(f"Invalid table name: {validation_message}")
         st.info("Example format: `my-project.my-dataset.my-table`")
     else:
-        # Create an OpenAI client
-        #client = OpenAI(api_key=openai_api_key)
-        # Create an OpenAI client using the secret API key
-        #try:
-         #   client = OpenAI(api_key=st.secrets["openai"]["api_key"])  # ← CHANGED: Now uses secrets instead of user input
-        #except KeyError:
-         #   st.error("OpenAI API key not found in secrets. Please contact the administrator.")
-          #  st.stop()
-
         # Create a session state variable to store the chat messages
         if "messages" not in st.session_state:
             st.session_state.messages = []
