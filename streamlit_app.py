@@ -263,10 +263,12 @@ else:
                     # Run BigQuery
                     bigquery_client = bigquery.Client.from_service_account_info(dict(st.secrets["gcp_service_account"]))
                     data = bigquery_client.query(QUERY).to_dataframe()
-                    st.dataframe(data)
+                    
                     # Add chart for aggregation queries
                     if query_info['type'] == 'aggregation' and not data.empty:
                         create_chart(data, query_info)
+                    else:
+                        st.dataframe(data)    
                 except Exception as e:
                     st.error(f"Error executing query: {e}")
                     # Try simple fallback
