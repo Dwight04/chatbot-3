@@ -23,7 +23,13 @@ st.title("💬 Text to SQL with Charts")
 #)
 st.write(
     "Simply enter your BigQuery table name and start asking questions about your data!"
-)    
+)   
+bigquery_table_name = st.text_input("BigQuery Table Name (format: project.dataset.table)", placeholder="your-project.your-dataset.your-table") 
+try:
+    client = OpenAI(api_key=st.secrets["openai"]["api_key"])
+except KeyError:
+    st.error("OpenAI API key not found in secrets. Please contact the administrator.")
+    st.stop()
 
 # Ask user for their OpenAI API key and BigQuery table name
 #openai_api_key = st.text_input("OpenAI API Key", type="password")
@@ -122,11 +128,11 @@ else:
         # Create an OpenAI client
         #client = OpenAI(api_key=openai_api_key)
         # Create an OpenAI client using the secret API key
-        try:
-            client = OpenAI(api_key=st.secrets["openai"]["api_key"])  # ← CHANGED: Now uses secrets instead of user input
-        except KeyError:
-            st.error("OpenAI API key not found in secrets. Please contact the administrator.")
-            st.stop()
+        #try:
+         #   client = OpenAI(api_key=st.secrets["openai"]["api_key"])  # ← CHANGED: Now uses secrets instead of user input
+        #except KeyError:
+         #   st.error("OpenAI API key not found in secrets. Please contact the administrator.")
+          #  st.stop()
 
         # Create a session state variable to store the chat messages
         if "messages" not in st.session_state:
