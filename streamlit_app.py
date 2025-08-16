@@ -16,15 +16,18 @@ bq_client = bigquery.Client(credentials=credentials, project='textsummarizerproj
 
 # Show title and description
 st.title("💬 Text to SQL with Charts")
+#st.write(
+ #   "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
+  #  "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+  #  "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+#)
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
-)
+    "Simply enter your BigQuery table name and start asking questions about your data!"
+)    
 
 # Ask user for their OpenAI API key and BigQuery table name
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-bigquery_table_name = st.text_input("BigQuery Table Name (format: project.dataset.table)", placeholder="your-project.your-dataset.your-table")
+#openai_api_key = st.text_input("OpenAI API Key", type="password")
+#bigquery_table_name = st.text_input("BigQuery Table Name (format: project.dataset.table)", placeholder="your-project.your-dataset.your-table")
 
 def validate_table_name(table_name):
     """Validate BigQuery table name format"""
@@ -104,9 +107,9 @@ def create_chart(data, query_info):
         st.bar_chart(chart_data[y_col])    
 
 
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-elif not bigquery_table_name:
+#if not openai_api_key:
+#    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
+if not bigquery_table_name:
     st.info("Please add your Google BigQuery Table Name to continue.")    
 else:
     # Validate table name format
@@ -117,7 +120,13 @@ else:
         st.info("Example format: `my-project.my-dataset.my-table`")
     else:
         # Create an OpenAI client
-        client = OpenAI(api_key=openai_api_key)
+        #client = OpenAI(api_key=openai_api_key)
+        # Create an OpenAI client using the secret API key
+        try:
+            client = OpenAI(api_key=st.secrets["openai"]["api_key"])  # ← CHANGED: Now uses secrets instead of user input
+        except KeyError:
+            st.error("OpenAI API key not found in secrets. Please contact the administrator.")
+            st.stop()
 
         # Create a session state variable to store the chat messages
         if "messages" not in st.session_state:
